@@ -258,8 +258,11 @@ class SeparatedReplayBuffer(object):
             self.available_actions = torch.ones(self.episode_length + 1, self.n_rollout_threads, act_space.n, device=self.device)
         else:
             self.available_actions = None
-
-        act_shape = get_shape_from_act_space(act_space)
+        
+        if act_space.__class__.__name__ == 'tuple':
+            act_shape = 4
+        else:
+            act_shape = get_shape_from_act_space(act_space)
 
         self.actions = torch.zeros(self.episode_length, self.n_rollout_threads, act_shape, device=self.device)
         self.action_log_probs = torch.zeros(self.episode_length, self.n_rollout_threads, act_shape, device=self.device)

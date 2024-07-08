@@ -24,7 +24,7 @@ import torch
 import time
 import yaml
 import argparse
-
+import sys
 
 multi_agent_velocity_map = {
     'Safety2x4AntVelocity-v0': {
@@ -149,7 +149,7 @@ def single_agent_args():
         {"name": "--num-envs", "type": int, "default": 10, "help": "The number of parallel game environments"},
         {"name": "--experiment", "type": str, "default": "single_agent_exp", "help": "Experiment name"},
         {"name": "--log-dir", "type": str, "default": "../runs", "help": "directory to save agent logs"},
-        {"name": "--device", "type": str, "default": "cpu", "help": "The device to run the model on"},
+        {"name": "--device", "type": str, "default": "cuda", "help": "The device to run the model on"},
         {"name": "--device-id", "type": int, "default": 0, "help": "The device id to run the model on"},
         {"name": "--write-terminal", "type": lambda x: bool(strtobool(x)), "default": True, "help": "Toggles terminal logging"},
         {"name": "--headless", "type": lambda x: bool(strtobool(x)), "default": False, "help": "Toggles headless mode"},
@@ -196,14 +196,14 @@ def multi_agent_args(algo):
     # Define custom parameters
     custom_parameters = [
         {"name": "--use-eval", "type": lambda x: bool(strtobool(x)), "default": False, "help": "Use evaluation environment for testing"},
-        {"name": "--task", "type": str, "default": "Safety2x4AntVelocity-v0", "help": "The task to run"},
+        {"name": "--task", "type": str, "default": "MaMEC", "help": "The task to run"},
         {"name": "--agent-conf", "type": str, "default": "2x4", "help": "The agent configuration"},
         {"name": "--scenario", "type": str, "default": "Ant", "help": "The scenario"},
         {"name": "--experiment", "type": str, "default": "Base", "help": "Experiment name"},
         {"name": "--seed", "type": int, "default":0, "help": "Random seed"},
         {"name": "--model-dir", "type": str, "default": "", "help": "Choose a model dir"},
         {"name": "--cost-limit", "type": float, "default": 25.0, "help": "cost_lim"},
-        {"name": "--device", "type": str, "default": "cpu", "help": "The device to run the model on"},
+        {"name": "--device", "type": str, "default": "cuda", "help": "The device to run the model on"},
         {"name": "--device-id", "type": int, "default": 0, "help": "The device id to run the model on"},
         {"name": "--write-terminal", "type": lambda x: bool(strtobool(x)), "default": True, "help": "Toggles terminal logging"},
         {"name": "--headless", "type": lambda x: bool(strtobool(x)), "default": False, "help": "Toggles headless mode"},
@@ -229,8 +229,10 @@ def multi_agent_args(algo):
             raise Exception("Please install isaacgym to run Isaac Gym tasks!")
         args = gymutil.parse_arguments(description="RL Policy", custom_parameters=issac_parameters)
         args.device = args.sim_device_type if args.use_gpu_pipeline else 'cpu'
+        
     cfg_train_path = "marl_cfg/{}/config.yaml".format(algo)
     base_path = os.path.dirname(os.path.abspath(__file__)).replace("utils", "multi_agent")
+    
     with open(os.path.join(base_path, cfg_train_path), 'r') as f:
         cfg_train = yaml.load(f, Loader=yaml.SafeLoader)
         if args.task in multi_agent_velocity_map.keys():
@@ -239,7 +241,10 @@ def multi_agent_args(algo):
             args.scenario = multi_agent_velocity_map[args.task]["scenario"]
         elif args.task in multi_agent_goal_tasks:
             cfg_train.update(cfg_train.get("mamujoco"))
-
+        elif args.task == 'MaMEC':
+            pass
+            
+        
     cfg_train["use_eval"] = args.use_eval
     cfg_train["cost_limit"]=args.cost_limit
     cfg_train["algorithm_name"]=algo
@@ -271,6 +276,9 @@ def multi_agent_args(algo):
                 cfg_env["task"] = {"randomize": False}
     elif args.task in multi_agent_velocity_map.keys() or args.task in multi_agent_goal_tasks:
         pass
+    elif args.task == 'MaMEC':
+        with open('/home/jinbo/Repos/Safe-Policy-Optimization/safepo/envs/MEC_Vehicle/MaMEC.yaml', 'r') as f:
+            cfg_env = yaml.load(f, Loader=yaml.SafeLoader)
     else:
         warn_task_name()
 

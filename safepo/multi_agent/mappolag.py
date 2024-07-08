@@ -257,7 +257,7 @@ class Runner:
         self.config = config
         self.model_dir = model_dir
 
-        self.num_agents = self.envs.num_agents
+        self.num_agents = self.envs.n_agents
 
         torch.autograd.set_detect_anomaly(True)
         torch.backends.cudnn.enabled = True
@@ -274,7 +274,7 @@ class Runner:
         self.logger.save_config(config)
         self.policy = []
         for agent_id in range(self.num_agents):
-            share_observation_space = self.envs.share_observation_space[agent_id]
+            share_observation_space = self.envs.share_observation_space[0]
             po = MAPPO_L_Policy(config,
                         self.envs.observation_space[agent_id],
                         share_observation_space,
@@ -289,7 +289,7 @@ class Runner:
         self.buffer = []
         for agent_id in range(self.num_agents):
             tr = MAPPO_L_Trainer(config, self.policy[agent_id])
-            share_observation_space = self.envs.share_observation_space[agent_id]
+            share_observation_space = self.envs.share_observation_space[0]
 
             bu = SeparatedReplayBuffer(config,
                                        self.envs.observation_space[agent_id],
@@ -306,8 +306,8 @@ class Runner:
 
         train_episode_rewards = torch.zeros(1, self.config["n_rollout_threads"], device=self.config["device"])
         train_episode_costs = torch.zeros(1, self.config["n_rollout_threads"], device=self.config["device"])
-        eval_rewards=0.0
-        eval_costs=0.0
+        eval_rewards = 0.0
+        eval_costs = 0.0
         for episode in range(episodes):
 
             done_episodes_rewards = []
@@ -393,11 +393,11 @@ class Runner:
         obs, share_obs, _ = self.envs.reset()
 
         for agent_id in range(self.num_agents):
-            self.buffer[agent_id].share_obs[0].copy_(share_obs[:, agent_id])
+            self.buffer[agent_id].share_obs[0].copy_(torch.from_numpy(share_obs[0]))
             if 'Frank'in self.config['env_name']:
                 self.buffer[agent_id].obs[0].copy_(obs[agent_id])
             else:
-                self.buffer[agent_id].obs[0].copy_(obs[:, agent_id])
+                self.buffer[agent_id].obs[0].copy_(torch.tensor(obs[agent_id]))
 
     @torch.no_grad()
     def collect(self, step):
@@ -627,6 +627,10 @@ def train(args, cfg_train):
         cfg_eval["seed"] = args.seed + 10000
         cfg_eval["n_rollout_threads"] = cfg_eval["n_eval_rollout_threads"]
         eval_env = make_ma_multi_goal_env(task=args.task, seed=args.seed + 10000, cfg_train=cfg_eval)
+    elif args.task == 'MaMEC':
+        from safepo.envs.MEC_Vehicle.BaseEnv import Environment
+        env = Environment(args)
+        eval_env = env
     else: 
         raise NotImplementedError
     

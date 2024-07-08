@@ -206,7 +206,7 @@ class MultiAgentActor(nn.Module):
         action_log_probs, dist_entropy = actor.evaluate_actions(observation, rnn_states, action, masks)
     """
 
-    def __init__(self, config, obs_space, action_space, device=torch.device("cpu")):
+    def __init__(self, config, obs_space, action_space, device=torch.device("cuda")):
         super(MultiAgentActor, self).__init__()
         self.hidden_size = config["hidden_size"]
         self.config=config
